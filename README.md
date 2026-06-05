@@ -57,6 +57,14 @@ CIN_0001 IN VSS 0.21f
 
 The parser ignores simulator control lines such as `.subckt`, `.model`, `.tran`, and source/load statements unless they begin with `R`, `C`, `M`, or `X` in a supported form.
 
+For SPICE input, element classification is based on the first character of the element name:
+
+- `*` at the beginning of a line is a comment.
+- `.` at the beginning of a line is ignored as a control/model/subckt statement.
+- `C...` is capacitance.
+- `R...` is resistance.
+- `M...` or `X...` is treated as a MOS/device instance.
+
 ## Use
 
 Open `index.html` in a browser. No server or build step is required.
