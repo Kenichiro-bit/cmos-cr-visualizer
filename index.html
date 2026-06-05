@@ -694,6 +694,20 @@ C_PROBE PROBE_TAP GND 1.3f
       return el.cBareUnit.value;
     }
 
+    function isValueToken(token) {
+      return /^[-+]?\d*\.?\d+(?:e[-+]?\d+)?[a-zA-ZΩ]*$/i.test(String(token || ""));
+    }
+
+    function capParamValue(tokens, startIndex) {
+      for (let i = startIndex; i < tokens.length; i += 1) {
+        const token = tokens[i];
+        const param = token.match(/^(?:c|cap|capacitance|cgs|cgd|cgb|cg)=([^=]+)$/i);
+        if (param) return param[1];
+        if (isValueToken(token)) return token;
+      }
+      return "";
+    }
+
     function parseTable(text) {
       const lines = text.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith("#"));
       if (!lines.length) return [];
@@ -756,6 +770,33 @@ C_PROBE PROBE_TAP GND 1.3f
         if (tokens.length < 4) return;
         const name = tokens[0];
         const head = name[0]?.toUpperCase();
+        if (/^ln/i.test(name)) {
+          const inlineCap = capParamValue(tokens, 3);
+          if (inlineCap) {
+            const capLike = tokens.length === 4 || isValueToken(tokens[3]);
+            out.push({
+              type: "C",
+              name: `${name}_CAP`,
+              node1: cleanNode(capLike ? tokens[1] : (tokens[2] || tokens[1])),
+              node2: cleanNode(capLike ? tokens[2] : (tokens[3] || "VSS")),
+              value: parseValue(inlineCap, bareCapUnit()),
+              source: `line ${index + 1}`
+            });
+          }
+          if (tokens.length >= 5) {
+            out.push({
+              type: "M",
+              name,
+              node1: cleanNode(tokens[1]),
+              gate: cleanNode(tokens[2]),
+              node2: cleanNode(tokens[3]),
+              model: tokens.find((token, tokenIndex) => tokenIndex >= 4 && !token.includes("=")) || "dummy_mos",
+              value: NaN,
+              source: `line ${index + 1}`
+            });
+          }
+          return;
+        }
         const modelTokenIndex = tokens.findIndex((token, tokenIndex) => tokenIndex >= 4 && !token.includes("="));
         const model = modelTokenIndex >= 0 ? tokens[modelTokenIndex].toLowerCase() : "";
         if ((head === "M" || head === "X") && tokens.length >= 5) {

@@ -64,6 +64,7 @@ For SPICE input, element classification is based on the first character of the e
 - `C...` is capacitance.
 - `R...` is resistance.
 - `M...` or `X...` is treated as a MOS/device instance.
+- `ln...` is treated as a dummy MOS-like device. If it contains a bare numeric value or a parameter such as `C=...`, `CAP=...`, `CG=...`, `CGS=...`, `CGD=...`, or `CGB=...`, a pseudo capacitance element is added for node capacitance summaries.
 
 ## Use
 
