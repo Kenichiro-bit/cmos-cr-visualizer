@@ -7,7 +7,8 @@ A browser-only tool for visualizing parasitic capacitance and resistance network
 - Paste or upload extraction text.
 - Parse SPICE-like `C`, `R`, and MOS instance lines.
 - Visualize capacitance by net and by element.
-- Visualize an RC net graph where nodes are nets and edges are resistance elements.
+- Summarize capacitance hanging from each node, split into grounded and coupling contribution.
+- Visualize a focused R ladder around a selected node instead of drawing every resistor in a large netlist.
 - Show MOS device mappings for lines such as:
 
 ```spice
@@ -57,3 +58,10 @@ The parser ignores simulator control lines such as `.subckt`, `.model`, `.tran`,
 ## Use
 
 Open `index.html` in a browser. No server or build step is required.
+
+For large PEX decks:
+
+1. Paste or upload the deck and click Analyze.
+2. Open Capacitance and inspect Node Capacitance Summary.
+3. Click a node name, or type it into R focus node.
+4. Open R Ladder and adjust R depth to inspect only the local resistance ladder around that node.
