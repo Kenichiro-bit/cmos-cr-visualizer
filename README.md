@@ -76,3 +76,4 @@ For large PEX decks:
 2. Open Capacitance and inspect Node Capacitance Summary.
 3. Click a node name, or type it into R focus node.
 4. Open R Ladder and adjust R depth to inspect only the local resistance ladder around that node.
+5. Use Export SVG or Export CSV to save the currently displayed focused ladder.
