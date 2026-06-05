@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CMOS C/R Visualizer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2933;
+      --muted: #697586;
+      --line: #d5dbe3;
+      --panel: #f7f9fb;
+      --panel-2: #eef4f8;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --danger: #b42318;
+      --white: #ffffff;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+      font-family: "Segoe UI", "Yu Gothic UI", "Hiragino Sans", Meiryo, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--white);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 14px 22px;
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    h1 {
+      font-size: 20px;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      border: 1px solid var(--line);
+      background: var(--white);
+      color: var(--ink);
+      min-height: 34px;
+      padding: 6px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .button.primary {
+      border-color: #0f766e;
+      background: var(--accent);
+      color: white;
+    }
+
+    .button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(15, 118, 110, 0.22);
+      outline-offset: 1px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    aside {
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .file {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: var(--white);
+      border-radius: 6px;
+      padding: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      resize: none;
+      min-height: 310px;
+      height: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      line-height: 1.45;
+      background: var(--white);
+      color: var(--ink);
+      tab-size: 2;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    input[type="search"], input[type="number"], select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--white);
+      min-height: 34px;
+      padding: 6px 8px;
+      color: var(--ink);
+      min-width: 0;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .workspace {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      background: var(--white);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 18px 0;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .tab {
+      border: 1px solid transparent;
+      border-bottom: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 9px 13px;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      min-height: 38px;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      background: var(--white);
+      border-color: var(--line);
+      margin-bottom: -1px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric {
+      background: var(--white);
+      padding: 13px 18px;
+      min-width: 0;
+    }
+
+    .metric .value {
+      font-weight: 700;
+      font-size: 20px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .view {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .band {
+      display: grid;
+      gap: 12px;
+    }
+
+    .band-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 7px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1.4fr) minmax(130px, 3fr) minmax(82px, auto);
+      align-items: center;
+      gap: 10px;
+      min-height: 28px;
+    }
+
+    .bar-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+    }
+
+    .track {
+      height: 10px;
+      background: var(--panel-2);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #dce6ec;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+    }
+
+    .fill.r {
+      background: var(--accent-2);
+    }
+
+    .bar-value {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .graph-wrap {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      min-height: 520px;
+      background: #fcfdfd;
+      overflow: hidden;
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 560px;
+      display: block;
+    }
+
+    .edge {
+      stroke: #9a6a1d;
+      stroke-linecap: round;
+    }
+
+    .node {
+      fill: #ffffff;
+      stroke: #48616f;
+      stroke-width: 1.5;
+    }
+
+    .node.hot {
+      fill: #d7f2ec;
+      stroke: #0f766e;
+    }
+
+    .node-label {
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 11px;
+      fill: #24343d;
+      pointer-events: none;
+    }
+
+    .edge-label {
+      font-size: 10px;
+      fill: #6f4d17;
+      pointer-events: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 9px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--panel);
+      color: #40515f;
+      font-weight: 650;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      font-family: Consolas, "Cascadia Mono", monospace;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      padding: 28px;
+      text-align: center;
+      background: var(--panel);
+    }
+
+    .topology {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(96px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .topo-node, .topo-device {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--white);
+      padding: 10px;
+      min-height: 68px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+    }
+
+    .topo-device {
+      background: #fbf7ef;
+      border-color: #e4cfa6;
+    }
+
+    .topo-device.nmos {
+      background: #eef8f5;
+      border-color: #aad9cf;
+    }
+
+    .topo-title {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .topo-meta {
+      color: var(--muted);
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .error {
+      color: var(--danger);
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    @media (max-width: 920px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        min-height: 560px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .bar-row {
+        grid-template-columns: minmax(95px, 1fr) minmax(90px, 1.4fr) minmax(72px, auto);
+      }
+
+      .topology {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <h1>CMOS C/R Visualizer</h1>
+        <div class="status" id="status">サンプルデータを読み込み済み</div>
+      </div>
+      <div class="actions">
+        <button class="button" id="sampleBtn" type="button" title="サンプル入力">Sample</button>
+        <button class="button" id="clearBtn" type="button" title="入力を消去">Clear</button>
+        <button class="button primary" id="parseBtn" type="button" title="解析を実行">Analyze</button>
+      </div>
+    </header>
+
+    <main>
+      <aside>
+        <div class="input-row">
+          <input class="file" id="fileInput" type="file" accept=".txt,.csv,.tsv,.json,.spef,.sp,.net,.cir">
+          <select id="formatSelect" title="入力形式">
+            <option value="auto">Auto</option>
+            <option value="table">CSV/TSV</option>
+            <option value="json">JSON</option>
+            <option value="spice">SPICE</option>
+          </select>
+        </div>
+        <div class="controls">
+          <label>Net filter
+            <input id="netFilter" type="search" placeholder="例: VDD, OUT, bitline">
+          </label>
+          <label>Top N
+            <input id="topN" type="number" min="5" max="200" step="5" value="20">
+          </label>
+          <label>R min (ohm)
+            <input id="rMin" type="number" min="0" step="0.01" value="0">
+          </label>
+          <label>C min (fF)
+            <input id="cMin" type="number" min="0" step="0.01" value="0">
+          </label>
+        </div>
+        <textarea id="rawInput" spellcheck="false"></textarea>
+        <div>
+          <div class="error" id="error"></div>
+          <div class="hint">対応: CSV/TSV列名 type,name,node1,node2,value,unit / JSON配列 / SPICE風 C1 n1 n2 2.4f, R1 n1 n2 18.2</div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <nav class="tabs" aria-label="views">
+          <button class="tab active" data-view="cap" type="button">Capacitance</button>
+          <button class="tab" data-view="res" type="button">R Ladder</button>
+          <button class="tab" data-view="table" type="button">Elements</button>
+        </nav>
+        <section class="metrics" id="metrics"></section>
+        <section class="view" id="view"></section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const sample = `# 2-input CMOS gate parasitic extraction sample
+# SPICE-like C/R elements: name node1 node2 value
+#
+# Device netlist supplied by user
+# PMOS stack: VDD -- XPU1 -- PN -- XPU2 -- Y
+# NMOS pull-downs: Y -- XPD1/XPD2 -- VSS
+XPU1 PN A VDD pmos
+XPU2 PN B Y pmos
+XPD1 Y A VSS nmos
+XPD2 Y B VSS nmos
+#
+# Pull-up PMOS stack parasitics
+C_XPU1_DRAIN PN VSS 6.6f
+C_XPU1_SOURCE VDD VSS 3.8f
+C_XPU2_SOURCE PN VSS 5.9f
+C_XPU2_DRAIN Y VSS 7.4f
+C_PN_TO_Y PN Y 1.5f
+C_Y_METAL Y VSS 15.2f
+C_Y_TO_LOAD Y LOAD 6.0f
+C_A_GATE A GND 3.2f
+C_B_GATE B GND 3.3f
+R_VDD_RAIL_1 VDD VDD_TAP 2.7
+R_XPU1_CONTACT VDD_TAP VDD 4.1
+R_XPU1_CH VDD PN 46.0
+R_PN_DIFF PN PN_TAP 6.4
+R_XPU2_CH PN_TAP Y 49.5
+R_Y_PU_CONTACT Y Y_PU_TAP 5.7
+#
+# Pull-down NMOS parallel parasitics
+C_XPD1_DRAIN Y VSS 7.0f
+C_XPD2_DRAIN Y VSS 7.2f
+C_XPD1_SOURCE VSS VSS_TAP_A 2.8f
+C_XPD2_SOURCE VSS VSS_TAP_B 2.9f
+C_VSS_RAIL VSS GND 4.6f
+R_Y_NMOS_SPLIT Y Y_NMOS_TAP 4.8
+R_XPD1_CH Y_NMOS_TAP VSS_TAP_A 58.0
+R_XPD2_CH Y_NMOS_TAP VSS_TAP_B 62.0
+R_XPD1_CONTACT VSS_TAP_A VSS 8.6
+R_XPD2_CONTACT VSS_TAP_B VSS 8.9
+R_VSS_RAIL_1 VSS VSS_RAIL_1 2.5
+R_VSS_RAIL_2 VSS_RAIL_1 GND 3.2
+#
+# More complex ladder: side taps, coupling paths, and load branch
+R_Y_METAL_1 Y Y_SEG_1 5.4
+R_Y_METAL_2 Y_SEG_1 Y_SEG_2 7.9
+R_Y_METAL_3 Y_SEG_2 LOAD 11.6
+R_Y_BRANCH_A Y_SEG_1 SENSE_TAP 38.0
+R_Y_BRANCH_B Y_SEG_2 PROBE_TAP 51.0
+R_PN_SIDE_1 PN SIDE_TAP_1 72.0
+R_PN_SIDE_2 SIDE_TAP_1 Y 88.0
+C_Y_SEG_1 Y_SEG_1 VSS 4.5f
+C_Y_SEG_2 Y_SEG_2 VSS 3.8f
+C_LOAD LOAD GND 12.0f
+C_SENSE SENSE_TAP GND 1.6f
+C_PROBE PROBE_TAP GND 1.3f
+`;
+
+    const state = {
+      elements: [],
+      view: "cap",
+    };
+
+    const el = {
+      raw: document.getElementById("rawInput"),
+      file: document.getElementById("fileInput"),
+      format: document.getElementById("formatSelect"),
+      parse: document.getElementById("parseBtn"),
+      sample: document.getElementById("sampleBtn"),
+      clear: document.getElementById("clearBtn"),
+      filter: document.getElementById("netFilter"),
+      topN: document.getElementById("topN"),
+      rMin: document.getElementById("rMin"),
+      cMin: document.getElementById("cMin"),
+      status: document.getElementById("status"),
+      error: document.getElementById("error"),
+      metrics: document.getElementById("metrics"),
+      view: document.getElementById("view"),
+    };
+
+    function parseValue(text, fallbackUnit = "") {
+      if (text === undefined || text === null || text === "") return NaN;
+      const raw = String(text).trim().replace(/ohms?$/i, "");
+      const match = raw.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)([a-zA-ZΩ]*)$/);
+      if (!match) return Number(raw);
+      const value = Number(match[1]);
+      const unit = (match[2] || fallbackUnit || "").toLowerCase();
+      const scale = {
+        f: 1e-15, ff: 1e-15, p: 1e-12, pf: 1e-12, n: 1e-9, nf: 1e-9,
+        u: 1e-6, uf: 1e-6, m: 1e-3, k: 1e3, kohm: 1e3, meg: 1e6,
+        mohm: 1e6, g: 1e9, ohm: 1, "": 1, "Ω": 1
+      }[unit] ?? 1;
+      return value * scale;
+    }
+
+    function normalizeType(type, name) {
+      const t = String(type || "").trim().toUpperCase();
+      const n = String(name || "").trim().toUpperCase();
+      if (t.startsWith("C") || n.startsWith("C")) return "C";
+      if (t.startsWith("R") || n.startsWith("R")) return "R";
+      if (t === "MOS" || t === "PMOS" || t === "NMOS" || n.startsWith("M") || n.startsWith("X")) return "M";
+      return "";
+    }
+
+    function cleanNode(node) {
+      return String(node || "").trim().replace(/^net[:=]/i, "") || "(floating)";
+    }
+
+    function parseTable(text) {
+      const lines = text.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith("#"));
+      if (!lines.length) return [];
+      const delimiter = lines[0].includes("\t") ? "\t" : ",";
+      const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+      const hasHeader = headers.some(h => ["type", "name", "node1", "node2", "value", "unit", "net"].includes(h));
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      return dataLines.map((line, i) => {
+        const cells = line.split(delimiter).map(c => c.trim());
+        const row = {};
+        if (hasHeader) headers.forEach((h, idx) => row[h] = cells[idx] || "");
+        else {
+          row.type = cells[0];
+          row.name = cells[1];
+          row.node1 = cells[2];
+          row.node2 = cells[3];
+          row.value = cells[4];
+          row.unit = cells[5] || "";
+        }
+        const name = row.name || `${row.type || "E"}${i + 1}`;
+        const type = normalizeType(row.type, name);
+        return {
+          type,
+          name,
+          node1: cleanNode(row.node1 || row.net),
+          node2: cleanNode(row.node2 || "GND"),
+          gate: cleanNode(row.gate || row.nodeg || ""),
+          model: row.model || row.device || "",
+          value: type === "M" ? NaN : parseValue(row.value || row.capacitance || row.resistance, row.unit),
+          source: "table"
+        };
+      }).filter(item => item.type && (item.type === "M" || Number.isFinite(item.value)));
+    }
+
+    function parseJson(text) {
+      const data = JSON.parse(text);
+      const list = Array.isArray(data) ? data : (data.elements || data.parasitics || []);
+      return list.map((row, i) => {
+        const name = row.name || row.id || `${row.type || "E"}${i + 1}`;
+        const type = normalizeType(row.type || row.kind, name);
+        return {
+          type,
+          name,
+          node1: cleanNode(row.node1 || row.n1 || row.from || row.net),
+          node2: cleanNode(row.node2 || row.n2 || row.to || "GND"),
+          gate: cleanNode(row.gate || row.g || ""),
+          model: row.model || row.device || row.kind || "",
+          value: type === "M" ? NaN : parseValue(row.value ?? row.capacitance ?? row.resistance, row.unit),
+          source: "json"
+        };
+      }).filter(item => item.type && (item.type === "M" || Number.isFinite(item.value)));
+    }
+
+    function parseSpice(text) {
+      const out = [];
+      text.split(/\r?\n/).forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("*") || trimmed.startsWith("#") || trimmed.startsWith("//") || trimmed.startsWith(".")) return;
+        const tokens = trimmed.split(/\s+/);
+        if (tokens.length < 4) return;
+        const name = tokens[0];
+        const model = tokens[tokens.length - 1].toLowerCase();
+        const isMos = /^[xm]/i.test(name) && tokens.length >= 5 && /^(p?mos|n?mos|pmos|nmos)$/i.test(model);
+        if (isMos) {
+          out.push({
+            type: "M",
+            name,
+            node1: cleanNode(tokens[1]),
+            gate: cleanNode(tokens[2]),
+            node2: cleanNode(tokens[3]),
+            model,
+            value: NaN,
+            source: `line ${index + 1}`
+          });
+          return;
+        }
+        const type = normalizeType("", name);
+        if (!type) return;
+        out.push({
+          type,
+          name,
+          node1: cleanNode(tokens[1]),
+          node2: cleanNode(tokens[2]),
+          value: parseValue(tokens[3]),
+          source: `line ${index + 1}`
+        });
+      });
+      return out.filter(item => item.type === "M" || Number.isFinite(item.value));
+    }
+
+    function parseInput() {
+      const text = el.raw.value.trim();
+      if (!text) return [];
+      const format = el.format.value;
+      if (format === "json") return parseJson(text);
+      if (format === "table") return parseTable(text);
+      if (format === "spice") return parseSpice(text);
+      const attempts = [
+        () => parseJson(text),
+        () => parseSpice(text),
+        () => parseTable(text)
+      ];
+      for (const attempt of attempts) {
+        try {
+          const parsed = attempt();
+          if (parsed.length) return parsed;
+        } catch (_) {}
+      }
+      return [];
+    }
+
+    function formatCap(farad) {
+      const abs = Math.abs(farad);
+      if (abs >= 1e-9) return `${(farad / 1e-9).toFixed(3)} nF`;
+      if (abs >= 1e-12) return `${(farad / 1e-12).toFixed(3)} pF`;
+      return `${(farad / 1e-15).toFixed(2)} fF`;
+    }
+
+    function formatOhm(ohm) {
+      const abs = Math.abs(ohm);
+      if (abs >= 1e6) return `${(ohm / 1e6).toFixed(3)} MΩ`;
+      if (abs >= 1e3) return `${(ohm / 1e3).toFixed(3)} kΩ`;
+      return `${ohm.toFixed(3)} Ω`;
+    }
+
+    function filteredElements() {
+      const q = el.filter.value.trim().toLowerCase();
+      const cMin = Number(el.cMin.value || 0) * 1e-15;
+      const rMin = Number(el.rMin.value || 0);
+      return state.elements.filter(item => {
+        const haystack = [item.name, item.node1, item.gate, item.node2, item.model].filter(Boolean).join(" ").toLowerCase();
+        const hit = !q || haystack.includes(q);
+        const above = item.type === "M" ? true : (item.type === "C" ? item.value >= cMin : item.value >= rMin);
+        return hit && above;
+      });
+    }
+
+    function groupCaps(caps) {
+      const map = new Map();
+      caps.forEach(c => {
+        [c.node1, c.node2].forEach(node => {
+          if (node.toUpperCase() === "GND" || node === "0") return;
+          map.set(node, (map.get(node) || 0) + c.value / 2);
+        });
+      });
+      return [...map.entries()].map(([node, value]) => ({ node, value })).sort((a, b) => b.value - a.value);
+    }
+
+    function sum(items) {
+      return items.reduce((acc, item) => acc + item.value, 0);
+    }
+
+    function topItems(items) {
+      return [...items].sort((a, b) => b.value - a.value).slice(0, Number(el.topN.value || 20));
+    }
+
+    function renderMetrics(items) {
+      const caps = items.filter(x => x.type === "C");
+      const res = items.filter(x => x.type === "R");
+      const mos = items.filter(x => x.type === "M");
+      const capTotal = sum(caps);
+      const resTotal = sum(res);
+      el.metrics.innerHTML = [
+        ["C count", caps.length],
+        ["C total", formatCap(capTotal)],
+        ["R count", res.length],
+        ["R sum", formatOhm(resTotal)],
+        ["MOS count", mos.length]
+      ].map(([label, value]) => `<div class="metric"><div class="value">${escapeHtml(String(value))}</div><div class="label">${label}</div></div>`).join("");
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[ch]));
+    }
+
+    function renderBars(rows, valueFormat, className = "") {
+      if (!rows.length) return `<div class="empty">該当データなし</div>`;
+      const max = Math.max(...rows.map(row => row.value), 1e-30);
+      return `<div class="bars">${rows.map(row => {
+        const label = row.label || row.name || row.node;
+        const width = Math.max(1, row.value / max * 100);
+        return `<div class="bar-row" title="${escapeHtml(label)}">
+          <div class="bar-label">${escapeHtml(label)}</div>
+          <div class="track"><div class="fill ${className}" style="width:${width}%"></div></div>
+          <div class="bar-value">${escapeHtml(valueFormat(row.value))}</div>
+        </div>`;
+      }).join("")}</div>`;
+    }
+
+    function renderNandTopology(items) {
+      const mos = items.filter(x => x.type === "M");
+      const mosCards = mos.map(device => {
+        const isNmos = /nmos/i.test(device.model);
+        const model = isNmos ? "NMOS" : (/pmos/i.test(device.model) ? "PMOS" : "MOS");
+        return `<div class="topo-device ${isNmos ? "nmos" : ""}">
+          <div class="topo-title">${escapeHtml(device.name)} ${model}</div>
+          <div class="topo-meta">${escapeHtml(device.node1)} - ${escapeHtml(device.node2)}<br>gate=${escapeHtml(device.gate || "(none)")}</div>
+        </div>`;
+      }).join("");
+      return `<section class="band">
+        <div class="band-head"><h2>CMOS Device Map</h2><span class="subtle">参照用の素子対応。メイン図は抽出RCネット表示</span></div>
+        <div class="topology">
+          ${mosCards || `
+          <div class="topo-node"><div class="topo-title">VDD rail</div><div class="topo-meta">VDD, VDD_TAP_A/B</div></div>
+          <div class="topo-device"><div class="topo-title">PMOS A</div><div class="topo-meta">PU_A_SRC - PU_A_DRAIN<br>gate=A / pull-up</div></div>
+          <div class="topo-device"><div class="topo-title">PMOS B</div><div class="topo-meta">PU_B_SRC - PU_B_DRAIN<br>gate=B / pull-up</div></div>
+          <div class="topo-node"><div class="topo-title">Output</div><div class="topo-meta">OUT, OUT_SEG_1/2, LOAD</div></div>
+          <div class="topo-node"><div class="topo-title">Inputs</div><div class="topo-meta">A, B gate nets</div></div>
+          <div class="topo-node"><div class="topo-title">Output to PDN</div><div class="topo-meta">OUT - PDN_TOP</div></div>
+          <div class="topo-device nmos"><div class="topo-title">NMOS A</div><div class="topo-meta">PDN_TOP - PDN_MID<br>gate=A / series</div></div>
+          <div class="topo-device nmos"><div class="topo-title">NMOS B</div><div class="topo-meta">PDN_MID - PDN_BOT<br>gate=B / series</div></div>
+          <div class="topo-node"><div class="topo-title">GND rail</div><div class="topo-meta">PDN_BOT, GND_TAP_A/B, GND</div></div>
+          <div class="topo-node"><div class="topo-title">Side taps</div><div class="topo-meta">SENSE_TAP, PROBE_TAP, SIDE_TAP_1</div></div>
+          `}
+        </div>
+      </section>`;
+    }
+
+    function renderCapView(items) {
+      const caps = items.filter(x => x.type === "C");
+      const byNet = groupCaps(caps).slice(0, Number(el.topN.value || 20)).map(row => ({ ...row, label: row.node }));
+      const byElem = topItems(caps).map(row => ({ ...row, label: `${row.name} (${row.node1}-${row.node2})` }));
+      el.view.innerHTML = `
+        ${renderNandTopology(items)}
+        <section class="band">
+          <div class="band-head"><h2>Net Capacitance</h2><span class="subtle">接続ネットに半分ずつ配分</span></div>
+          ${renderBars(byNet, formatCap)}
+        </section>
+        <section class="band">
+          <div class="band-head"><h2>Capacitor Elements</h2><span class="subtle">値の大きい順</span></div>
+          ${renderBars(byElem, formatCap)}
+        </section>`;
+    }
+
+    function graphColumnKey(nodeId) {
+      const id = nodeId.toUpperCase();
+      if (id === "VDD" || id.startsWith("VDD")) return "00_vdd";
+      if (id === "A" || id === "B" || id.startsWith("IN")) return "01_input";
+      if (id === "PN" || id.startsWith("PN") || id.startsWith("PU") || id.includes("PMOS")) return "02_pullup";
+      if (id === "Y" || id.startsWith("Y") || id === "OUT" || id.startsWith("OUT")) return "03_output";
+      if (id.startsWith("PDN") || id.includes("NMOS") || id.startsWith("SIDE")) return "04_pulldown";
+      if (id === "GND" || id === "0" || id.startsWith("GND") || id === "VSS" || id.startsWith("VSS")) return "05_ground";
+      if (id === "LOAD" || id.includes("TAP") || id.startsWith("PROBE") || id.startsWith("SENSE")) return "06_load_tap";
+      return `07_${id.split(/[.:_\-]/)[0]}`;
+    }
+
+    function buildGraph(resistors) {
+      const nodeMap = new Map();
+      const nodes = [];
+      resistors.forEach(r => {
+        [r.node1, r.node2].forEach(name => {
+          if (!nodeMap.has(name)) {
+            const node = { id: name, degree: 0, cap: 0, x: 0, y: 0 };
+            nodeMap.set(name, node);
+            nodes.push(node);
+          }
+          nodeMap.get(name).degree += 1;
+        });
+      });
+      const caps = filteredElements().filter(x => x.type === "C");
+      caps.forEach(c => {
+        if (nodeMap.has(c.node1)) nodeMap.get(c.node1).cap += c.value / 2;
+        if (nodeMap.has(c.node2)) nodeMap.get(c.node2).cap += c.value / 2;
+      });
+      const edges = resistors.map(r => ({ ...r, a: nodeMap.get(r.node1), b: nodeMap.get(r.node2) }));
+      const columns = new Map();
+      nodes.forEach(node => {
+        const key = graphColumnKey(node.id);
+        if (!columns.has(key)) columns.set(key, []);
+        columns.get(key).push(node);
+      });
+      const groups = [...columns.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([, group]) => group);
+      const width = 980;
+      const height = Math.max(620, Math.max(...groups.map(group => group.length), 1) * 62 + 160);
+      groups.forEach((group, gi) => {
+        group.sort((a, b) => a.id.localeCompare(b.id));
+        const x = 70 + gi * Math.max(105, (width - 150) / Math.max(groups.length - 1, 1));
+        group.forEach((node, ni) => {
+          node.x = Math.min(width - 70, x);
+          node.y = 70 + ni * Math.max(44, (height - 140) / Math.max(group.length - 1, 1));
+        });
+      });
+      return { nodes, edges, width, height };
+    }
+
+    function renderResView(items) {
+      const resistors = items.filter(x => x.type === "R");
+      const topR = topItems(resistors).map(row => ({ ...row, label: `${row.name} (${row.node1}-${row.node2})` }));
+      if (!resistors.length) {
+        el.view.innerHTML = `${renderNandTopology(items)}<div class="empty">抵抗データなし</div>`;
+        return;
+      }
+      const graph = buildGraph(resistors);
+      const maxR = Math.max(...resistors.map(r => r.value), 1);
+      const maxCap = Math.max(...graph.nodes.map(n => n.cap), 1e-30);
+      const svgEdges = graph.edges.map(edge => {
+        const width = 1.5 + edge.value / maxR * 7;
+        const mx = (edge.a.x + edge.b.x) / 2;
+        const my = (edge.a.y + edge.b.y) / 2;
+        return `<g>
+          <line class="edge" x1="${edge.a.x}" y1="${edge.a.y}" x2="${edge.b.x}" y2="${edge.b.y}" stroke-width="${width}"></line>
+          <text class="edge-label" x="${mx + 4}" y="${my - 4}">${escapeHtml(formatOhm(edge.value))}</text>
+        </g>`;
+      }).join("");
+      const svgNodes = graph.nodes.map(node => {
+        const radius = 7 + Math.sqrt(node.cap / maxCap) * 11;
+        const labelY = node.y + radius + 13;
+        const label = node.id.length > 15 ? `${node.id.slice(0, 14)}…` : node.id;
+        const hot = node.cap > 0 ? " hot" : "";
+        return `<g title="${escapeHtml(node.id)}">
+          <circle class="node${hot}" cx="${node.x}" cy="${node.y}" r="${radius.toFixed(1)}"></circle>
+          <text class="node-label" text-anchor="middle" x="${node.x}" y="${labelY}">${escapeHtml(label)}</text>
+        </g>`;
+      }).join("");
+      el.view.innerHTML = `
+        ${renderNandTopology(items)}
+        <section class="band">
+          <div class="band-head"><h2>RC Net Graph</h2><span class="subtle">丸=net/node / 線=R要素 / ノード径=C寄与</span></div>
+          <div class="graph-wrap"><svg viewBox="0 0 ${graph.width} ${graph.height}" role="img" aria-label="resistance ladder graph">${svgEdges}${svgNodes}</svg></div>
+        </section>
+        <section class="band">
+          <div class="band-head"><h2>Largest Resistors</h2><span class="subtle">値の大きい順</span></div>
+          ${renderBars(topR, formatOhm, "r")}
+        </section>`;
+    }
+
+    function renderTable(items) {
+      if (!items.length) {
+        el.view.innerHTML = `<div class="empty">該当データなし</div>`;
+        return;
+      }
+      const rows = items.slice(0, 500).map(item => `<tr>
+        <td>${escapeHtml(item.type)}</td>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.node1)}</td>
+        <td>${escapeHtml(item.gate || "")}</td>
+        <td>${escapeHtml(item.node2)}</td>
+        <td>${escapeHtml(item.type === "M" ? item.model : (item.type === "C" ? formatCap(item.value) : formatOhm(item.value)))}</td>
+        <td>${escapeHtml(item.source)}</td>
+      </tr>`).join("");
+      el.view.innerHTML = `<section class="band">
+        <div class="band-head"><h2>Parsed Elements</h2><span class="subtle">最大500行表示</span></div>
+        <table>
+          <thead><tr><th>Type</th><th>Name</th><th>Node 1</th><th>Gate</th><th>Node 2</th><th>Value/Model</th><th>Source</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>`;
+    }
+
+    function render() {
+      const items = filteredElements();
+      renderMetrics(items);
+      if (state.view === "cap") renderCapView(items);
+      if (state.view === "res") renderResView(items);
+      if (state.view === "table") renderTable(items);
+      el.status.textContent = `${state.elements.length} elements parsed / ${items.length} visible`;
+    }
+
+    function analyze() {
+      el.error.textContent = "";
+      try {
+        const parsed = parseInput();
+        state.elements = parsed;
+        if (!parsed.length) el.error.textContent = "C/R要素を読めませんでした。列名またはSPICE風行を確認してください。";
+        render();
+      } catch (error) {
+        el.error.textContent = error.message;
+      }
+    }
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+        button.classList.add("active");
+        state.view = button.dataset.view;
+        render();
+      });
+    });
+
+    [el.filter, el.topN, el.rMin, el.cMin].forEach(input => input.addEventListener("input", render));
+    el.parse.addEventListener("click", analyze);
+    el.sample.addEventListener("click", () => {
+      el.raw.value = sample;
+      el.format.value = "auto";
+      analyze();
+    });
+    el.clear.addEventListener("click", () => {
+      el.raw.value = "";
+      state.elements = [];
+      el.error.textContent = "";
+      render();
+    });
+    el.file.addEventListener("change", async () => {
+      const file = el.file.files[0];
+      if (!file) return;
+      el.raw.value = await file.text();
+      analyze();
+    });
+
+    el.raw.value = sample;
+    analyze();
+  </script>
+</body>
+</html>
