@@ -535,6 +535,7 @@
           </label>
           <label>Bare C unit
             <select id="cBareUnit">
+              <option value="auto">auto</option>
               <option value="f">fF</option>
               <option value="p">pF</option>
               <option value="n">nF</option>
@@ -659,7 +660,9 @@ C_PROBE PROBE_TAP GND 1.3f
       const match = raw.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)([a-zA-ZΩ]*)$/);
       if (!match) return Number(raw);
       const value = Number(match[1]);
-      const unit = (match[2] || fallbackUnit || "").toLowerCase();
+      const explicitUnit = match[2] || "";
+      let unit = (explicitUnit || fallbackUnit || "").toLowerCase();
+      if (!explicitUnit && unit === "auto") unit = /e[-+]?\d+/i.test(match[1]) ? "" : "f";
       const scale = {
         f: 1e-15, ff: 1e-15, p: 1e-12, pf: 1e-12, n: 1e-9, nf: 1e-9,
         u: 1e-6, uf: 1e-6, m: 1e-3, k: 1e3, kohm: 1e3, meg: 1e6,
@@ -808,7 +811,11 @@ C_PROBE PROBE_TAP GND 1.3f
       const abs = Math.abs(farad);
       if (abs >= 1e-9) return `${(farad / 1e-9).toFixed(3)} nF`;
       if (abs >= 1e-12) return `${(farad / 1e-12).toFixed(3)} pF`;
-      return `${(farad / 1e-15).toFixed(2)} fF`;
+      if (abs >= 1e-15) return `${(farad / 1e-15).toFixed(3)} fF`;
+      if (abs >= 1e-18) return `${(farad / 1e-18).toFixed(3)} aF`;
+      if (abs >= 1e-21) return `${(farad / 1e-21).toFixed(3)} zF`;
+      if (abs > 0) return `${farad.toExponential(3)} F`;
+      return "0 F";
     }
 
     function formatOhm(ohm) {
