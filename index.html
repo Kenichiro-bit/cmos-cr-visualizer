@@ -710,8 +710,9 @@ C_PROBE PROBE_TAP GND 1.3f
         const tokens = trimmed.split(/\s+/);
         if (tokens.length < 4) return;
         const name = tokens[0];
-        const model = tokens[tokens.length - 1].toLowerCase();
-        const isMos = /^[xm]/i.test(name) && tokens.length >= 5 && /^(p?mos|n?mos|pmos|nmos)$/i.test(model);
+        const modelTokenIndex = tokens.findIndex((token, tokenIndex) => tokenIndex >= 4 && !token.includes("="));
+        const model = modelTokenIndex >= 0 ? tokens[modelTokenIndex].toLowerCase() : "";
+        const isMos = /^[xm]/i.test(name) && tokens.length >= 5 && /(p?mos|n?mos|pmos|nmos)/i.test(model);
         if (isMos) {
           out.push({
             type: "M",

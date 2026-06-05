@@ -43,6 +43,17 @@ R PN:300 VSS 1000
 
 For SPICE-like rows, bare capacitance values on `C` lines are treated as fF. Bare resistance values on `R` lines are treated as ohms.
 
+PEX-style MOS rows with model names and parameters are accepted:
+
+```spice
+MMP0 OUT_M1 IN_M1 VDD_M1 VDD_M1 pmos_lvt W=1.0u L=40n
+MMN0 OUT_M1 IN_M1 VSS_M1 VSS_M1 nmos_lvt W=0.5u L=40n
+RIN_0001 IN IN_1 2.31
+CIN_0001 IN VSS 0.21f
+```
+
+The parser ignores simulator control lines such as `.subckt`, `.model`, `.tran`, and source/load statements unless they begin with `R`, `C`, `M`, or `X` in a supported form.
+
 ## Use
 
 Open `index.html` in a browser. No server or build step is required.
