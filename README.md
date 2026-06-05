@@ -30,6 +30,19 @@ C_Y_METAL Y VSS 15.2f
 C_PN_TO_Y PN Y 1.5f
 ```
 
+Node names with extraction point suffixes are also accepted:
+
+```spice
+XPU1 PN:300 A VDD pmos
+XPU2 PN:301 B Y pmos
+XPD1 Y A VSS nmos
+XPD2 Y B VSS nmos
+C PN:300 PN:301 100
+R PN:300 VSS 1000
+```
+
+For SPICE-like rows, bare capacitance values on `C` lines are treated as fF. Bare resistance values on `R` lines are treated as ohms.
+
 ## Use
 
 Open `index.html` in a browser. No server or build step is required.

@@ -545,26 +545,29 @@
 # Device netlist supplied by user
 # PMOS stack: VDD -- XPU1 -- PN -- XPU2 -- Y
 # NMOS pull-downs: Y -- XPD1/XPD2 -- VSS
-XPU1 PN A VDD pmos
-XPU2 PN B Y pmos
+XPU1 PN:300 A VDD pmos
+XPU2 PN:301 B Y pmos
 XPD1 Y A VSS nmos
 XPD2 Y B VSS nmos
+C PN:300 PN:301 100
+R PN:300 VSS 1000
 #
 # Pull-up PMOS stack parasitics
-C_XPU1_DRAIN PN VSS 6.6f
+C_XPU1_DRAIN PN:300 VSS 6.6f
 C_XPU1_SOURCE VDD VSS 3.8f
-C_XPU2_SOURCE PN VSS 5.9f
+C_XPU2_SOURCE PN:301 VSS 5.9f
 C_XPU2_DRAIN Y VSS 7.4f
-C_PN_TO_Y PN Y 1.5f
+C_PN_COUPLE PN:300 PN:301 1.5f
+C_PN_TO_Y PN:301 Y 1.2f
 C_Y_METAL Y VSS 15.2f
 C_Y_TO_LOAD Y LOAD 6.0f
 C_A_GATE A GND 3.2f
 C_B_GATE B GND 3.3f
 R_VDD_RAIL_1 VDD VDD_TAP 2.7
 R_XPU1_CONTACT VDD_TAP VDD 4.1
-R_XPU1_CH VDD PN 46.0
-R_PN_DIFF PN PN_TAP 6.4
-R_XPU2_CH PN_TAP Y 49.5
+R_XPU1_CH VDD PN:300 46.0
+R_PN_DIFF PN:300 PN:301 6.4
+R_XPU2_CH PN:301 Y 49.5
 R_Y_PU_CONTACT Y Y_PU_TAP 5.7
 #
 # Pull-down NMOS parallel parasitics
@@ -587,7 +590,7 @@ R_Y_METAL_2 Y_SEG_1 Y_SEG_2 7.9
 R_Y_METAL_3 Y_SEG_2 LOAD 11.6
 R_Y_BRANCH_A Y_SEG_1 SENSE_TAP 38.0
 R_Y_BRANCH_B Y_SEG_2 PROBE_TAP 51.0
-R_PN_SIDE_1 PN SIDE_TAP_1 72.0
+R_PN_SIDE_1 PN:300 SIDE_TAP_1 72.0
 R_PN_SIDE_2 SIDE_TAP_1 Y 88.0
 C_Y_SEG_1 Y_SEG_1 VSS 4.5f
 C_Y_SEG_2 Y_SEG_2 VSS 3.8f
@@ -724,12 +727,13 @@ C_PROBE PROBE_TAP GND 1.3f
         }
         const type = normalizeType("", name);
         if (!type) return;
+        const elementName = /^[cr]$/i.test(name) ? `${type}_${index + 1}` : name;
         out.push({
           type,
-          name,
+          name: elementName,
           node1: cleanNode(tokens[1]),
           node2: cleanNode(tokens[2]),
-          value: parseValue(tokens[3]),
+          value: parseValue(tokens[3], type === "C" ? "f" : ""),
           source: `line ${index + 1}`
         });
       });
