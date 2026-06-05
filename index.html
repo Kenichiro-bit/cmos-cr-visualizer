@@ -681,6 +681,12 @@ C_PROBE PROBE_TAP GND 1.3f
       return String(node || "").trim().replace(/^net[:=]/i, "") || "(floating)";
     }
 
+    function baseNode(node) {
+      const text = String(node || "").trim();
+      const colon = text.indexOf(":");
+      return colon > 0 ? text.slice(0, colon) : text;
+    }
+
     function bareCapUnit() {
       return el.cBareUnit.value;
     }
@@ -831,9 +837,12 @@ C_PROBE PROBE_TAP GND 1.3f
 
     function nodeCapSummary(caps) {
       const map = new Map();
-      const ensure = node => {
-        if (!map.has(node)) map.set(node, { node, grounded: 0, coupling: 0, total: 0, count: 0 });
-        return map.get(node);
+      const ensure = rawNode => {
+        const node = baseNode(rawNode);
+        if (!map.has(node)) map.set(node, { node, grounded: 0, coupling: 0, total: 0, count: 0, members: new Set() });
+        const row = map.get(node);
+        row.members.add(rawNode);
+        return row;
       };
       caps.forEach(c => {
         const n1Ref = isReferenceNode(c.node1);
@@ -855,7 +864,9 @@ C_PROBE PROBE_TAP GND 1.3f
           b.count += 1;
         }
       });
-      return [...map.values()].map(row => ({ ...row, total: row.grounded + row.coupling })).sort((a, b) => b.total - a.total);
+      return [...map.values()]
+        .map(row => ({ ...row, members: [...row.members].sort(), total: row.grounded + row.coupling }))
+        .sort((a, b) => b.total - a.total);
     }
 
     function groupCaps(caps) {
@@ -909,14 +920,15 @@ C_PROBE PROBE_TAP GND 1.3f
       if (!rows.length) return `<div class="empty">ノード容量データなし</div>`;
       const top = rows.slice(0, Number(el.topN.value || 20));
       const body = top.map(row => `<tr>
-        <td><button class="node-button" data-node="${escapeHtml(row.node)}" type="button">${escapeHtml(row.node)}</button></td>
+        <td><button class="node-button" data-node="${escapeHtml(row.node)}" type="button" title="${escapeHtml(row.members.join(", "))}">${escapeHtml(row.node)}</button></td>
         <td>${escapeHtml(formatCap(row.total))}</td>
         <td>${escapeHtml(formatCap(row.grounded))}</td>
         <td>${escapeHtml(formatCap(row.coupling))}</td>
+        <td>${escapeHtml(String(row.members.length))}</td>
         <td>${escapeHtml(String(row.count))}</td>
       </tr>`).join("");
       return `<table>
-        <thead><tr><th>Node</th><th>Total C</th><th>Grounded C</th><th>Coupling C share</th><th>C elems</th></tr></thead>
+        <thead><tr><th>Node</th><th>Total C</th><th>Grounded C</th><th>Coupling C share</th><th>Extracted nodes</th><th>C elems</th></tr></thead>
         <tbody>${body}</tbody>
       </table>`;
     }
@@ -1035,10 +1047,11 @@ C_PROBE PROBE_TAP GND 1.3f
     function resolveFocusNode(items) {
       const typed = el.focusNode.value.trim();
       const nodes = allNodes(items);
-      if (typed && nodes.includes(typed)) return typed;
+      const baseNodes = [...new Set(nodes.map(baseNode))].sort((a, b) => a.localeCompare(b));
+      if (typed && (nodes.includes(typed) || baseNodes.includes(typed))) return typed;
       if (typed) {
         const lower = typed.toLowerCase();
-        const partial = nodes.find(node => node.toLowerCase().includes(lower));
+        const partial = baseNodes.find(node => node.toLowerCase().includes(lower)) || nodes.find(node => node.toLowerCase().includes(lower));
         if (partial) return partial;
       }
       const capRows = nodeCapSummary(items.filter(x => x.type === "C"));
@@ -1047,8 +1060,15 @@ C_PROBE PROBE_TAP GND 1.3f
 
     function resistanceNeighborhood(resistors, focus, depth) {
       if (!focus) return [];
-      const visited = new Set([focus]);
-      let frontier = new Set([focus]);
+      const focusBase = baseNode(focus);
+      const starts = new Set();
+      resistors.forEach(r => {
+        if (r.node1 === focus || baseNode(r.node1) === focusBase) starts.add(r.node1);
+        if (r.node2 === focus || baseNode(r.node2) === focusBase) starts.add(r.node2);
+      });
+      if (!starts.size) starts.add(focus);
+      const visited = new Set(starts);
+      let frontier = starts;
       const picked = [];
       for (let level = 0; level < depth; level += 1) {
         const next = new Set();

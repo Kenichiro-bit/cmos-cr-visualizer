@@ -42,6 +42,8 @@ C PN:300 PN:301 100
 R PN:300 VSS 1000
 ```
 
+In the node capacitance summary, extraction-point nodes are folded by the text before `:`. For example, `PN:300` and `PN:301` are summarized as `PN`.
+
 For SPICE-like rows, bare resistance values on `R` lines are treated as ohms. Bare capacitance values on `C` lines use the `Bare C unit` selector in the UI, with fF as the default. Select `F` when you want strict SPICE-style unitless capacitance values.
 
 PEX-style MOS rows with model names and parameters are accepted:
