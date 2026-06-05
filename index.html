@@ -533,6 +533,14 @@
           <label>C min (fF)
             <input id="cMin" type="number" min="0" step="0.01" value="0">
           </label>
+          <label>Bare C unit
+            <select id="cBareUnit">
+              <option value="f">fF</option>
+              <option value="p">pF</option>
+              <option value="n">nF</option>
+              <option value="">F</option>
+            </select>
+          </label>
           <label>R focus node
             <input id="focusNode" type="search" placeholder="例: OUT, IN_M1, PN:300">
           </label>
@@ -636,6 +644,7 @@ C_PROBE PROBE_TAP GND 1.3f
       topN: document.getElementById("topN"),
       rMin: document.getElementById("rMin"),
       cMin: document.getElementById("cMin"),
+      cBareUnit: document.getElementById("cBareUnit"),
       focusNode: document.getElementById("focusNode"),
       rDepth: document.getElementById("rDepth"),
       status: document.getElementById("status"),
@@ -672,6 +681,10 @@ C_PROBE PROBE_TAP GND 1.3f
       return String(node || "").trim().replace(/^net[:=]/i, "") || "(floating)";
     }
 
+    function bareCapUnit() {
+      return el.cBareUnit.value;
+    }
+
     function parseTable(text) {
       const lines = text.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith("#"));
       if (!lines.length) return [];
@@ -700,7 +713,7 @@ C_PROBE PROBE_TAP GND 1.3f
           node2: cleanNode(row.node2 || "GND"),
           gate: cleanNode(row.gate || row.nodeg || ""),
           model: row.model || row.device || "",
-          value: type === "M" ? NaN : parseValue(row.value || row.capacitance || row.resistance, row.unit),
+          value: type === "M" ? NaN : parseValue(row.value || row.capacitance || row.resistance, row.unit || (type === "C" ? bareCapUnit() : "")),
           source: "table"
         };
       }).filter(item => item.type && (item.type === "M" || Number.isFinite(item.value)));
@@ -719,7 +732,7 @@ C_PROBE PROBE_TAP GND 1.3f
           node2: cleanNode(row.node2 || row.n2 || row.to || "GND"),
           gate: cleanNode(row.gate || row.g || ""),
           model: row.model || row.device || row.kind || "",
-          value: type === "M" ? NaN : parseValue(row.value ?? row.capacitance ?? row.resistance, row.unit),
+          value: type === "M" ? NaN : parseValue(row.value ?? row.capacitance ?? row.resistance, row.unit || (type === "C" ? bareCapUnit() : "")),
           source: "json"
         };
       }).filter(item => item.type && (item.type === "M" || Number.isFinite(item.value)));
@@ -757,7 +770,7 @@ C_PROBE PROBE_TAP GND 1.3f
           name: elementName,
           node1: cleanNode(tokens[1]),
           node2: cleanNode(tokens[2]),
-          value: parseValue(tokens[3], type === "C" ? "f" : ""),
+          value: parseValue(tokens[3], type === "C" ? bareCapUnit() : ""),
           source: `line ${index + 1}`
         });
       });
@@ -1158,6 +1171,7 @@ C_PROBE PROBE_TAP GND 1.3f
     });
 
     [el.filter, el.topN, el.rMin, el.cMin, el.focusNode, el.rDepth].forEach(input => input.addEventListener("input", render));
+    el.cBareUnit.addEventListener("change", analyze);
     el.view.addEventListener("click", event => {
       const button = event.target.closest("[data-node]");
       if (!button) return;
